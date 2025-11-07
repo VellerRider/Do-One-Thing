@@ -31,23 +31,40 @@ chrome.runtime.sendMessage({ type: 'GET_STATS' }, (response) => {
 });
 
 function allowTemporarily() {
-  const confirmReason = prompt('Why do you need to access this site?\n(This will help improve future filtering)');
-  
-  if (confirmReason && blockedURL) {
-    // Add to whitelist temporarily
-    chrome.runtime.sendMessage({
-      type: 'ALLOW_TEMPORARILY',
-      payload: { url: blockedURL, reason: confirmReason }
-    }, () => {
-      window.location.href = blockedURL;
-    });
+  if (!blockedURL) {
+    console.error('No blocked URL found');
+    return;
   }
+  
+  // Show loading state
+  const btn = document.getElementById('btn-allow');
+  const originalText = btn.textContent;
+  btn.textContent = 'Loading...';
+  btn.disabled = true;
+  
+  // Add to temporary whitelist for this session
+  chrome.runtime.sendMessage({
+    type: 'ALLOW_TEMPORARILY',
+    payload: { url: blockedURL }
+  }, (response) => {
+    if (response && response.success && response.redirectUrl) {
+      // Redirect back to the original URL
+      window.location.href = response.redirectUrl;
+    } else {
+      // Show error and restore button
+      alert('Failed to allow site. Please try again.');
+      btn.textContent = originalText;
+      btn.disabled = false;
+      console.error('Failed to allow temporarily:', response?.error);
+    }
+  });
 }
 
-function goBack() {
-  history.back();
-}
-
-// Export functions to window for onclick handlers
-window.allowTemporarily = allowTemporarily;
-window.goBack = goBack;
+// Add event listeners to buttons (no inline onclick handlers)
+document.addEventListener('DOMContentLoaded', () => {
+  const btnAllow = document.getElementById('btn-allow');
+  
+  if (btnAllow) {
+    btnAllow.addEventListener('click', allowTemporarily);
+  }
+});

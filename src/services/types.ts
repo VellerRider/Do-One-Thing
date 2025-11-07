@@ -7,6 +7,7 @@ export interface FocusSession {
   endTime?: number;
   active: boolean;
   rules: ClassificationRules;
+  blockedCount: number; // Number of sites blocked in this session
 }
 
 export interface ClassificationRules {
@@ -96,8 +97,12 @@ export type MessageType =
   | 'UPDATE_SETTINGS'
   | 'GET_STATS'
   | 'CLEAR_CACHE'
-  | 'RELOAD_AI_CONFIG';
+  | 'RELOAD_AI_CONFIG'
+  | 'ALLOW_TEMPORARILY';
 
+export interface AllowTemporarilyPayload {
+  url: string;
+}
 export interface Message<T = any> {
   type: MessageType;
   payload?: T;

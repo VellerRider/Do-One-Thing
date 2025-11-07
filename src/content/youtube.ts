@@ -9,6 +9,20 @@ export class YouTubeFilter {
   initialize() {
     console.log('YouTube filter initialized');
     
+    // Wait for document.body to be available
+    if (document.body) {
+      this.start();
+    } else {
+      // Wait for DOM to be ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => this.start());
+      } else {
+        setTimeout(() => this.start(), 100);
+      }
+    }
+  }
+
+  private start() {
     // Initial filtering
     this.filterContent();
     
@@ -17,6 +31,13 @@ export class YouTubeFilter {
   }
 
   private setupObserver() {
+    // Make sure body exists before observing
+    if (!document.body) {
+      console.warn('YouTube filter: document.body not available yet');
+      setTimeout(() => this.setupObserver(), 100);
+      return;
+    }
+
     this.observer = new MutationObserver(() => {
       // Debounce filtering
       this.scheduleFiltering();

@@ -36,6 +36,13 @@ export class RequestBlocker {
     });
     
     if (!classification.relevant) {
+      // Increment blocked count for current session
+      const session = await Storage.getCurrentSession();
+      if (session && session.active) {
+        session.blockedCount = (session.blockedCount || 0) + 1;
+        await Storage.setCurrentSession(session);
+      }
+      
       // Redirect to blocked page
       const blockedURL = `${this.blockedPageURL}?url=${encodeURIComponent(details.url)}&reason=${encodeURIComponent(classification.reason || 'Not relevant to your focus goal')}`;
       

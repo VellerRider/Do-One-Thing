@@ -83,6 +83,9 @@ async function handleMessage(message: Message, _sender: chrome.runtime.MessageSe
     case 'RELOAD_AI_CONFIG':
       return handleReloadAIConfig();
     
+    case 'ALLOW_TEMPORARILY':
+      return handleAllowTemporarily(message.payload);
+    
     default:
       throw new Error(`Unknown message type: ${message.type}`);
   }
@@ -91,6 +94,10 @@ async function handleMessage(message: Message, _sender: chrome.runtime.MessageSe
 async function handleStartSession(payload: StartSessionPayload) {
   try {
     console.log('Starting focus session:', payload.intent);
+    
+    // Clear URL classification cache for new session
+    await Storage.clearURLCache();
+    console.log('Cleared URL cache for new session');
     
     // Analyze intent with AI
     const analysis = await aiService.analyzeIntent(payload.intent);
@@ -112,6 +119,7 @@ async function handleStartSession(payload: StartSessionPayload) {
         blockedDomains: settings.blacklist,
         strictness: settings.strictness,
       },
+      blockedCount: 0,
     };
     
     // Save session
@@ -247,6 +255,42 @@ async function handleReloadAIConfig() {
     return { success: true };
   } catch (error: any) {
     console.error('Failed to reload AI config:', error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+async function handleAllowTemporarily(payload: any) {
+  try {
+    const { url } = payload;
+    
+    // Add URL to temporary whitelist for current session
+    const session = await Storage.getCurrentSession();
+    if (!session || !session.active) {
+      return { success: false, error: 'No active session' };
+    }
+    
+    // Extract domain from URL
+    const urlObj = new URL(url);
+    const domain = urlObj.hostname.replace('www.', '');
+    
+    // Add to allowed domains for this session
+    if (!session.rules.allowedDomains.includes(domain)) {
+      session.rules.allowedDomains.push(domain);
+      await Storage.setCurrentSession(session);
+      await classifier.setSession(session);
+      
+      console.log(`Temporarily allowed: ${domain}`);
+    }
+    
+    return { 
+      success: true,
+      redirectUrl: url // Return URL to redirect to
+    };
+  } catch (error: any) {
+    console.error('Failed to allow temporarily:', error);
     return {
       success: false,
       error: error.message,

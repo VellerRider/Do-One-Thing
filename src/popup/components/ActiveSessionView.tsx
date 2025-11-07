@@ -54,7 +54,7 @@ export default function ActiveSessionView({ session, stats, onEnd }: Props) {
         </h2>
         
         <div className="flex items-center space-x-4 text-sm opacity-90">
-          <span>🚫 {stats?.totalBlocked || 0} blocked</span>
+          <span>🚫 {session.blockedCount || 0} blocked</span>
           <span>📋 {session.rules.keywords.length} keywords</span>
         </div>
       </div>
@@ -63,7 +63,7 @@ export default function ActiveSessionView({ session, stats, onEnd }: Props) {
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white rounded-lg p-4 shadow-sm">
           <div className="text-3xl font-bold text-red-600">
-            {stats?.totalBlocked || 0}
+            {session.blockedCount || 0}
           </div>
           <div className="text-sm text-gray-600 mt-1">Sites Blocked</div>
           <div className="text-xs text-gray-500 mt-1">This session</div>
