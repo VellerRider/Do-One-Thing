@@ -80,6 +80,9 @@ async function handleMessage(message: Message, _sender: chrome.runtime.MessageSe
     case 'CLEAR_CACHE':
       return handleClearCache();
     
+    case 'RELOAD_AI_CONFIG':
+      return handleReloadAIConfig();
+    
     default:
       throw new Error(`Unknown message type: ${message.type}`);
   }
@@ -230,6 +233,20 @@ async function handleClearCache() {
     return { success: true };
   } catch (error: any) {
     console.error('Failed to clear cache:', error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+async function handleReloadAIConfig() {
+  try {
+    await aiService.initialize();
+    console.log('AI config reloaded');
+    return { success: true };
+  } catch (error: any) {
+    console.error('Failed to reload AI config:', error);
     return {
       success: false,
       error: error.message,

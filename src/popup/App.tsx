@@ -105,6 +105,9 @@ export default function App() {
     try {
       await chrome.storage.local.set({ aiConfig: config });
       setAIConfig(config);
+      
+      // Notify background to reinitialize AI service
+      await chrome.runtime.sendMessage({ type: 'RELOAD_AI_CONFIG' });
     } catch (error) {
       console.error('Failed to save AI config:', error);
     }

@@ -13,11 +13,25 @@ export class AIService {
 
   async initialize() {
     this.config = await Storage.getAIConfig();
+    console.log('AI Service initialized with config:', this.config ? {
+      provider: this.config.provider,
+      model: this.config.model,
+      enabled: this.config.enabled,
+      hasApiKey: !!this.config.apiKey
+    } : 'No config');
   }
 
   async analyzeIntent(userInput: string): Promise<IntentAnalysisResult> {
+    console.log('analyzeIntent called with:', userInput);
+    
     if (!this.config || !this.config.enabled) {
-      throw new Error('AI service not configured');
+      console.error('AI service not configured:', this.config);
+      throw new Error('AI service not configured. Please set your API key in settings.');
+    }
+
+    if (!this.config.apiKey) {
+      console.error('API key missing');
+      throw new Error('API key is missing. Please set your API key in settings.');
     }
 
     if (this.config.provider === 'openai') {
@@ -46,6 +60,8 @@ Be comprehensive with keywords. Include synonyms, related terms, and domain-spec
 `;
 
     try {
+      console.log('Calling OpenAI API with model:', this.config!.model);
+      
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -63,11 +79,17 @@ Be comprehensive with keywords. Include synonyms, related terms, and domain-spec
         }),
       });
 
+      console.log('OpenAI response status:', response.status);
+
       if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('OpenAI API error:', response.status, errorData);
+        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}. ${errorData.error?.message || ''}`);
       }
 
       const data = await response.json();
+      console.log('OpenAI response received successfully');
+      
       const result = JSON.parse(data.choices[0].message.content);
       
       return {

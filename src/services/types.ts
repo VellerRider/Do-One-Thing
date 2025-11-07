@@ -95,7 +95,8 @@ export type MessageType =
   | 'FILTER_CONTENT'
   | 'UPDATE_SETTINGS'
   | 'GET_STATS'
-  | 'CLEAR_CACHE';
+  | 'CLEAR_CACHE'
+  | 'RELOAD_AI_CONFIG';
 
 export interface Message<T = any> {
   type: MessageType;

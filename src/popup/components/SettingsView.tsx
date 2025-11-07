@@ -15,6 +15,8 @@ export default function SettingsView({ settings, aiConfig, onUpdateSettings, onS
   const [model, setModel] = useState(aiConfig?.model || 'gpt-4o-mini');
   const [whitelistInput, setWhitelistInput] = useState('');
   const [blacklistInput, setBlacklistInput] = useState('');
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{success: boolean; message: string} | null>(null);
 
   const handleSaveAIConfig = () => {
     if (!apiKey.trim()) {
@@ -29,7 +31,62 @@ export default function SettingsView({ settings, aiConfig, onUpdateSettings, onS
       enabled: true,
     });
 
-    alert('AI configuration saved!');
+    setTestResult(null);
+    alert('AI configuration saved! You can now test the connection.');
+  };
+
+  const handleTestConnection = async () => {
+    if (!apiKey.trim()) {
+      alert('Please enter an API key first');
+      return;
+    }
+
+    setTesting(true);
+    setTestResult(null);
+
+    try {
+      // Save config first
+      await chrome.storage.local.set({ 
+        aiConfig: {
+          provider,
+          apiKey: apiKey.trim(),
+          model,
+          enabled: true,
+        }
+      });
+
+      // Reload AI config in background
+      await chrome.runtime.sendMessage({ type: 'RELOAD_AI_CONFIG' });
+
+      // Test with a simple intent
+      const response = await chrome.runtime.sendMessage({
+        type: 'START_SESSION',
+        payload: { intent: 'test connection - learning programming' }
+      });
+
+      if (response.success) {
+        setTestResult({
+          success: true,
+          message: '✅ Connection successful! AI is working properly.'
+        });
+        
+        // End the test session immediately
+        await chrome.runtime.sendMessage({ type: 'END_SESSION' });
+      } else {
+        setTestResult({
+          success: false,
+          message: `❌ Connection failed: ${response.error}`
+        });
+      }
+    } catch (error: any) {
+      console.error('Test connection error:', error);
+      setTestResult({
+        success: false,
+        message: `❌ Error: ${error.message}`
+      });
+    } finally {
+      setTesting(false);
+    }
   };
 
   const handleAddToWhitelist = () => {
@@ -178,6 +235,33 @@ export default function SettingsView({ settings, aiConfig, onUpdateSettings, onS
           >
             💾 Save AI Configuration
           </button>
+
+          <button
+            onClick={handleTestConnection}
+            disabled={testing || !apiKey.trim()}
+            className="w-full bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {testing ? '🔄 Testing...' : '🧪 Test Connection'}
+          </button>
+
+          {testResult && (
+            <div className={`p-3 rounded-lg text-sm ${
+              testResult.success 
+                ? 'bg-green-50 border border-green-200 text-green-800' 
+                : 'bg-red-50 border border-red-200 text-red-800'
+            }`}>
+              {testResult.message}
+            </div>
+          )}
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
+            <p className="font-semibold mb-1">💡 Tips:</p>
+            <ul className="list-disc list-inside space-y-1 text-blue-700">
+              <li>Click "Save" first, then "Test Connection"</li>
+              <li>Make sure you have API credits available</li>
+              <li>Check console (F12) for detailed error messages</li>
+            </ul>
+          </div>
         </div>
       )}
 
