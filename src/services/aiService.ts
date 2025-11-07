@@ -106,13 +106,18 @@ Be comprehensive with keywords. Include synonyms, related terms, and domain-spec
     }
   }
 
-  async classifyURL(payload: CheckURLPayload, intent: string, keywords: string[]): Promise<URLClassification> {
+  async classifyURL(
+    payload: CheckURLPayload, 
+    intent: string, 
+    keywords: string[],
+    strictness: 'relaxed' | 'standard' | 'strict' = 'standard'
+  ): Promise<URLClassification> {
     if (!this.config || !this.config.enabled) {
       throw new Error('AI service not configured');
     }
 
     if (this.config.provider === 'openai') {
-      return this.classifyURLWithOpenAI(payload, intent, keywords);
+      return this.classifyURLWithOpenAI(payload, intent, keywords, strictness);
     }
 
     throw new Error(`Unsupported AI provider: ${this.config.provider}`);
@@ -121,27 +126,64 @@ Be comprehensive with keywords. Include synonyms, related terms, and domain-spec
   private async classifyURLWithOpenAI(
     payload: CheckURLPayload, 
     intent: string, 
-    keywords: string[]
+    keywords: string[],
+    strictness: 'relaxed' | 'standard' | 'strict'
   ): Promise<URLClassification> {
+    // Extract domain and URL parameters to analyze content
+    const url = new URL(payload.url);
+    const domain = url.hostname.replace('www.', '');
+    const searchParams = url.searchParams.toString();
+    const urlPath = url.pathname;
+    
+    // Identify general knowledge websites
+    const generalKnowledgeSites = [
+      'google.com', 'google.co', 'bing.com', 'duckduckgo.com', 'baidu.com',
+      'wikipedia.org', 'wikihow.com', 'zhihu.com',
+      'stackoverflow.com', 'stackexchange.com', 
+      'github.com', 'gitlab.com',
+      'youtube.com', 'medium.com', 'reddit.com', 'quora.com'
+    ];
+    
+    const isGeneralSite = generalKnowledgeSites.some(site => domain.includes(site));
+    
+    // Build strictness-aware instructions
+    let strictnessInstruction = '';
+    if (strictness === 'relaxed') {
+      strictnessInstruction = `Be LENIENT and permissive. Allow websites unless they are clearly distracting (entertainment, social media, shopping unrelated to the goal).
+For general knowledge sites (Google, Wikipedia, etc.), focus on the SEARCH TERMS, URL PARAMETERS, and PAGE TITLE:
+- If the search terms or page content relate to the focus goal, ALLOW it
+- Only block if the content is clearly unrelated or distracting`;
+    } else if (strictness === 'standard') {
+      strictnessInstruction = `Be BALANCED. Allow websites that are reasonably related to the goal.
+For general knowledge sites (Google, Wikipedia, etc.), analyze the SPECIFIC CONTENT:
+- Check URL parameters (search queries, article topics)
+- Check page title
+- Allow if the content could reasonably help with the focus goal`;
+    } else {
+      strictnessInstruction = `Be STRICT. Only allow websites that directly help achieve the goal.
+Even for general sites, check if the specific content (search terms, page topic) is directly relevant.`;
+    }
+    
     const prompt = `Focus Goal: ${intent}
 Keywords: ${keywords.join(', ')}
+Strictness Mode: ${strictness}
 
-Website URL: ${payload.url}
-${payload.title ? `Page Title: ${payload.title}` : ''}
+Website Analysis:
+- Domain: ${domain}
+- Full URL: ${payload.url}
+- URL Path: ${urlPath}
+- URL Parameters: ${searchParams || 'none'}
+${payload.title ? `- Page Title: ${payload.title}` : ''}
+${isGeneralSite ? `- Note: This is a GENERAL KNOWLEDGE site (like Google/Wikipedia). Judge by the SPECIFIC CONTENT (search terms, article topic, URL parameters), NOT the domain itself.` : ''}
 
-Is this website relevant to the focus goal? Consider:
-1. Does it help achieve the stated goal?
-2. Is it educational/productive for this goal?
-3. Or is it a distraction (entertainment, social media, shopping, etc.)?
+${strictnessInstruction}
 
 Return JSON:
 {
   "relevant": true/false,
   "confidence": 0-100,
-  "reason": "brief explanation"
-}
-
-Be strict. When in doubt, mark as not relevant.`;
+  "reason": "brief explanation focusing on the specific content/search terms"
+}`;
 
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -153,7 +195,7 @@ Be strict. When in doubt, mark as not relevant.`;
         body: JSON.stringify({
           model: this.config!.model || 'gpt-4o-mini',
           messages: [
-            { role: 'system', content: 'You are a focus assistant that determines if websites are relevant to a user\'s goal. Be strict and conservative. Always respond with valid JSON.' },
+            { role: 'system', content: 'You are a focus assistant that determines if websites are relevant to a user\'s goal. For general knowledge sites (Google, Wikipedia, etc.), always analyze the SPECIFIC CONTENT (search queries, article topics, URL parameters) rather than blocking the entire domain. Always respond with valid JSON.' },
             { role: 'user', content: prompt }
           ],
           temperature: 0.2,

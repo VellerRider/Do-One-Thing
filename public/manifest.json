@@ -42,7 +42,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["blocked/index.html"],
+      "resources": ["blocked/index.html", "blocked/blocked.js"],
       "matches": ["<all_urls>"]
     }
   ]

@@ -7,9 +7,10 @@ echo "📦 Running post-build tasks..."
 # Create blocked directory
 mkdir -p dist/blocked
 
-# Copy blocked page
+# Copy blocked page and script
 cp src/blocked/index.html dist/blocked/index.html
-echo "✅ Copied blocked page"
+cp src/blocked/blocked.js dist/blocked/blocked.js
+echo "✅ Copied blocked page and script"
 
 # Check if all required files exist
 if [ -f "dist/background.js" ] && [ -f "dist/content.js" ] && [ -f "dist/src/popup/index.html" ]; then

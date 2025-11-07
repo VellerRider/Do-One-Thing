@@ -104,7 +104,8 @@ export class URLClassifier {
       const aiResult = await aiService.classifyURL(
         payload,
         this.session.intent,
-        rules.keywords
+        rules.keywords,
+        rules.strictness
       );
       
       await Storage.setURLClassification(aiResult);

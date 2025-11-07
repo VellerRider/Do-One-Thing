@@ -6,6 +6,7 @@ import SettingsView from './components/SettingsView';
 
 export default function App() {
   const [view, setView] = useState<'start' | 'active' | 'settings'>('start');
+  const [previousView, setPreviousView] = useState<'start' | 'active'>('start');
   const [session, setSession] = useState<FocusSession | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [settings, setSettings] = useState<UserSettings | null>(null);
@@ -50,6 +51,7 @@ export default function App() {
       if (response.success) {
         setSession(response.session);
         setView('active');
+        setPreviousView('active');
         
         // Notify all tabs
         const tabs = await chrome.tabs.query({});
@@ -73,6 +75,7 @@ export default function App() {
       if (response.success) {
         setSession(null);
         setView('start');
+        setPreviousView('start');
         await loadData();
         
         // Notify all tabs
@@ -134,7 +137,14 @@ export default function App() {
         </div>
         
         <button
-          onClick={() => setView(view === 'settings' ? 'start' : 'settings')}
+          onClick={() => {
+            if (view === 'settings') {
+              setView(previousView);
+            } else {
+              setPreviousView(view as 'start' | 'active');
+              setView('settings');
+            }
+          }}
           className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
         >
           {view === 'settings' ? '←' : '⚙️'}
