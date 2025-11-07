@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Site Blocked - DoOneThing</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      color: white;
+    }
+    
+    .container {
+      text-align: center;
+      max-width: 600px;
+      padding: 40px;
+    }
+    
+    .icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    
+    h1 {
+      font-size: 42px;
+      margin-bottom: 16px;
+      font-weight: 700;
+    }
+    
+    .subtitle {
+      font-size: 20px;
+      margin-bottom: 12px;
+      opacity: 0.95;
+    }
+    
+    .reason {
+      font-size: 16px;
+      opacity: 0.8;
+      margin-bottom: 32px;
+    }
+    
+    .suggestions {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    
+    .suggestions h2 {
+      font-size: 18px;
+      margin-bottom: 16px;
+    }
+    
+    .suggestions a {
+      display: block;
+      background: white;
+      color: #667eea;
+      text-decoration: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-weight: 600;
+      transition: transform 0.2s;
+    }
+    
+    .suggestions a:hover {
+      transform: scale(1.05);
+    }
+    
+    .actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+    
+    button {
+      padding: 12px 24px;
+      border-radius: 8px;
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-back {
+      background: white;
+      color: #667eea;
+    }
+    
+    .btn-allow {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 2px solid white;
+    }
+    
+    button:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">🎯</div>
+    <h1>Stay Focused!</h1>
+    <p class="subtitle" id="intent">This site is not related to your goal</p>
+    <p class="reason" id="reason">You're trying to focus on something else</p>
+    
+    <div class="suggestions">
+      <h2>📚 Try these instead:</h2>
+      <div id="suggestions-list">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+    
+    <div class="actions">
+      <button class="btn-back" onclick="history.back()">← Go Back</button>
+      <button class="btn-allow" onclick="allowTemporarily()">Allow Once</button>
+    </div>
+  </div>
+  
+  <script>
+    // Parse URL parameters
+    const params = new URLSearchParams(window.location.search);
+    const blockedURL = params.get('url');
+    const reason = params.get('reason');
+    
+    if (reason) {
+      document.getElementById('reason').textContent = reason;
+    }
+    
+    // Load session info and suggestions
+    chrome.runtime.sendMessage({ type: 'GET_STATS' }, (response) => {
+      if (response.success && response.session) {
+        document.getElementById('intent').textContent = 
+          `Stay focused on: ${response.session.intent}`;
+        
+        // Show suggested websites
+        const suggestionsContainer = document.getElementById('suggestions-list');
+        const suggestions = response.session.rules.allowedDomains.slice(0, 5);
+        
+        if (suggestions.length > 0) {
+          suggestions.forEach(domain => {
+            const link = document.createElement('a');
+            link.href = `https://${domain}`;
+            link.textContent = domain;
+            suggestionsContainer.appendChild(link);
+          });
+        } else {
+          suggestionsContainer.innerHTML = '<p>No suggestions available</p>';
+        }
+      }
+    });
+    
+    function allowTemporarily() {
+      const confirmReason = prompt('Why do you need to access this site?\n(This will help improve future filtering)');
+      
+      if (confirmReason && blockedURL) {
+        // Add to whitelist temporarily
+        chrome.runtime.sendMessage({
+          type: 'ALLOW_TEMPORARILY',
+          payload: { url: blockedURL, reason: confirmReason }
+        }, () => {
+          window.location.href = blockedURL;
+        });
+      }
+    }
+  </script>
+</body>
+</html>
