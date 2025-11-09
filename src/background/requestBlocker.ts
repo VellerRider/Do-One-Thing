@@ -26,8 +26,21 @@ export class RequestBlocker {
     // Only handle main frame navigations
     if (details.frameId !== 0) return;
     
-    // Don't block our own extension pages
-    if (details.url.startsWith('chrome-extension://')) return;
+    // Don't block browser internal pages
+    const url = details.url.toLowerCase();
+    if (
+      url.startsWith('chrome://') ||
+      url.startsWith('chrome-extension://') ||
+      url.startsWith('edge://') ||
+      url.startsWith('about:') ||
+      url === 'chrome://newtab/' ||
+      url === 'edge://newtab/' ||
+      url === 'about:newtab' ||
+      url === 'about:blank'
+    ) {
+      return;
+    }
+    
     if (details.url.startsWith(this.blockedPageURL)) return;
     
     // Check if URL should be blocked

@@ -20,6 +20,28 @@ export class URLClassifier {
   }
 
   async classifyURL(payload: CheckURLPayload): Promise<URLClassification> {
+    // Always allow browser new tab pages and internal pages
+    const url = payload.url.toLowerCase();
+    if (
+      url.startsWith('chrome://') ||
+      url.startsWith('chrome-extension://') ||
+      url.startsWith('edge://') ||
+      url.startsWith('about:') ||
+      url === 'chrome://newtab/' ||
+      url === 'edge://newtab/' ||
+      url === 'about:newtab' ||
+      url === 'about:blank'
+    ) {
+      return {
+        url: payload.url,
+        relevant: true,
+        confidence: 100,
+        reason: 'Browser internal page',
+        timestamp: Date.now(),
+        source: 'rules',
+      };
+    }
+    
     if (!this.session || !this.session.active) {
       // No active session, allow all
       return {
