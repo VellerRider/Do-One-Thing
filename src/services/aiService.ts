@@ -69,12 +69,11 @@ Be comprehensive with keywords. Include synonyms, related terms, and domain-spec
           'Authorization': `Bearer ${this.config!.apiKey}`,
         },
         body: JSON.stringify({
-          model: this.config!.model || 'gpt-4o-mini',
+          model: this.config!.model || 'gpt-5-mini',
           messages: [
             { role: 'system', content: 'You are a helpful assistant that analyzes user focus intentions. Always respond with valid JSON.' },
             { role: 'user', content: prompt }
           ],
-          temperature: 0.3,
           response_format: { type: 'json_object' }
         }),
       });
@@ -193,12 +192,11 @@ Return JSON:
           'Authorization': `Bearer ${this.config!.apiKey}`,
         },
         body: JSON.stringify({
-          model: this.config!.model || 'gpt-4o-mini',
+          model: this.config!.model || 'gpt-5-mini',
           messages: [
             { role: 'system', content: 'You are a focus assistant that determines if websites are relevant to a user\'s goal. For general knowledge sites (Google, Wikipedia, etc.), always analyze the SPECIFIC CONTENT (search queries, article topics, URL parameters) rather than blocking the entire domain. Always respond with valid JSON.' },
             { role: 'user', content: prompt }
           ],
-          temperature: 0.2,
           response_format: { type: 'json_object' }
         }),
       });
@@ -248,12 +246,11 @@ Return JSON array:
           'Authorization': `Bearer ${this.config!.apiKey}`,
         },
         body: JSON.stringify({
-          model: this.config!.model || 'gpt-4o-mini',
+          model: this.config!.model || 'gpt-5-mini',
           messages: [
             { role: 'system', content: 'You are a focus assistant. Classify websites based on relevance. Always respond with valid JSON array.' },
             { role: 'user', content: prompt }
           ],
-          temperature: 0.2,
           response_format: { type: 'json_object' }
         }),
       });

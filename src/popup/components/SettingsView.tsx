@@ -12,7 +12,7 @@ export default function SettingsView({ settings, aiConfig, onUpdateSettings, onS
   const [activeTab, setActiveTab] = useState<'ai' | 'rules' | 'data'>('ai');
   const [apiKey, setApiKey] = useState(aiConfig?.apiKey || '');
   const [provider, setProvider] = useState(aiConfig?.provider || 'openai');
-  const [model, setModel] = useState(aiConfig?.model || 'gpt-4o-mini');
+  const [model, setModel] = useState(aiConfig?.model || 'gpt-5-mini');
   const [whitelistInput, setWhitelistInput] = useState('');
   const [blacklistInput, setBlacklistInput] = useState('');
   const [testing, setTesting] = useState(false);
@@ -223,10 +223,13 @@ export default function SettingsView({ settings, aiConfig, onUpdateSettings, onS
               onChange={(e) => setModel(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
             >
-              <option value="gpt-4o-mini">GPT-4o Mini (Recommended)</option>
-              <option value="gpt-4o">GPT-4o</option>
-              <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+              <option value="gpt-5-mini">GPT-5 Mini (Recommended - Fast & Affordable)</option>
+              <option value="gpt-5-nano">GPT-5 Nano (Fastest & Most Affordable)</option>
+              <option value="gpt-5">GPT-5 (Most Capable)</option>
             </select>
+            <p className="text-xs text-gray-500 mt-1">
+              GPT-5 series models offer improved performance and efficiency
+            </p>
           </div>
 
           <button

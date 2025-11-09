@@ -27,7 +27,7 @@ DoOneThing is an AI-powered Chrome extension that helps you focus on one thing a
 - **Frontend**: React 18 + TypeScript
 - **Styling**: Tailwind CSS
 - **Build Tool**: Vite
-- **AI Service**: OpenAI API (gpt-4o-mini)
+- **AI Service**: OpenAI API (gpt-5-mini, gpt-5-nano, gpt-4o-mini, etc.)
 - **Platform**: Chrome Extension Manifest V3
 
 ### � Quick Start
@@ -144,7 +144,7 @@ DoOneThing 是一个基于 AI 的 Chrome 浏览器专注插件，通过智能过
 - **前端**：React 18 + TypeScript
 - **样式**：Tailwind CSS
 - **构建工具**：Vite
-- **AI 服务**：OpenAI API (gpt-4o-mini)
+- **AI 服务**：OpenAI API (gpt-5-mini, gpt-5-nano, gpt-4o-mini 等)
 - **平台**：Chrome Extension Manifest V3
 
 ### 🚀 快速开始
