@@ -48,7 +48,6 @@ The extension requires the following permissions:
 
 - **storage**: To save your settings and session data locally
 - **declarativeNetRequest**: To block websites based on your focus goals
-- **declarativeNetRequestFeedback**: To provide feedback on blocked requests
 - **scripting**: To inject content filters on web pages
 - **tabs**: To detect which websites you're visiting
 - **webNavigation**: To monitor page navigation for filtering
@@ -139,7 +138,6 @@ DoOneThing（"我们"或"该扩展"）致力于保护您的隐私。本隐私政
 
 - **storage**：在本地保存您的设置和会话数据
 - **declarativeNetRequest**：根据您的专注目标拦截网站
-- **declarativeNetRequestFeedback**：提供拦截请求的反馈
 - **scripting**：在网页上注入内容过滤器
 - **tabs**：检测您正在访问的网站
 - **webNavigation**：监控页面导航以进行过滤
