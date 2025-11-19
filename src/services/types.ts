@@ -11,9 +11,6 @@ export interface FocusSession {
 }
 
 export interface ClassificationRules {
-  keywords: string[];
-  allowedCategories: string[];
-  blockedCategories: string[];
   allowedDomains: string[];
   blockedDomains: string[];
   strictness: StrictnessLevel;
@@ -47,10 +44,6 @@ export interface ContentFilterResult {
 
 export interface IntentAnalysisResult {
   intent: string;
-  keywords: string[];
-  allowedCategories: string[];
-  blockedCategories: string[];
-  suggestedWebsites: string[];
   confidence: number;
 }
 
@@ -77,6 +70,7 @@ export interface UserSettings {
   showStats: boolean;
   notificationsEnabled: boolean;
   aiEnabled: boolean;
+  dataSharingConsent: boolean;
 }
 
 export interface StorageData {
@@ -119,8 +113,13 @@ export interface CheckURLPayload {
 
 export interface FilterContentPayload {
   url: string;
-  content: string;
+  content?: string;
   platform?: 'youtube' | 'generic';
+  videos?: Array<{
+    id: string;
+    title: string;
+    channelName?: string;
+  }>;
 }
 
 // YouTube specific types

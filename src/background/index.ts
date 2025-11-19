@@ -1,6 +1,6 @@
 // Background Service Worker - Main entry point
 
-import type { Message, StartSessionPayload, CheckURLPayload, FocusSession } from '../services/types';
+import type { Message, StartSessionPayload, CheckURLPayload, FocusSession, FilterContentPayload } from '../services/types';
 import { Storage } from '../services/storage';
 import { aiService } from '../services/aiService';
 import { URLClassifier } from './urlClassifier';
@@ -9,7 +9,7 @@ import { generateSessionId } from '../utils/helpers';
 
 // Initialize modules
 const classifier = new URLClassifier();
-const blocker = new RequestBlocker(classifier);
+const blocker = new RequestBlocker();
 
 let initPromise: Promise<void> | null = null;
 
@@ -85,6 +85,9 @@ async function handleMessage(message: Message, _sender: chrome.runtime.MessageSe
     
     case 'ALLOW_TEMPORARILY':
       return handleAllowTemporarily(message.payload);
+
+    case 'FILTER_CONTENT':
+      return handleFilterContent(message.payload as FilterContentPayload);
     
     default:
       throw new Error(`Unknown message type: ${message.type}`);
@@ -92,6 +95,8 @@ async function handleMessage(message: Message, _sender: chrome.runtime.MessageSe
 }
 
 async function handleStartSession(payload: StartSessionPayload) {
+  await chrome.storage.local.set({ sessionStarting: true });
+  
   try {
     console.log('Starting focus session:', payload.intent);
     
@@ -99,11 +104,19 @@ async function handleStartSession(payload: StartSessionPayload) {
     await Storage.clearURLCache();
     console.log('Cleared URL cache for new session');
     
-    // Analyze intent with AI
-    const analysis = await aiService.analyzeIntent(payload.intent);
-    
     // Get user settings
     const settings = await Storage.getSettings();
+
+    if (!settings.aiEnabled) {
+      throw new Error('AI filtering is disabled. Enable it in Settings to start a focus session.');
+    }
+
+    if (!settings.dataSharingConsent) {
+      throw new Error('Please consent to sending URLs to the AI service in Settings before starting.');
+    }
+
+    // Analyze intent with AI (for normalization)
+    const analysis = await aiService.analyzeIntent(payload.intent);
     
     // Create session
     const session: FocusSession = {
@@ -112,11 +125,8 @@ async function handleStartSession(payload: StartSessionPayload) {
       startTime: Date.now(),
       active: true,
       rules: {
-        keywords: analysis.keywords,
-        allowedCategories: analysis.allowedCategories,
-        blockedCategories: analysis.blockedCategories,
-        allowedDomains: [...analysis.suggestedWebsites, ...settings.whitelist],
-        blockedDomains: settings.blacklist,
+        allowedDomains: [...settings.whitelist],
+        blockedDomains: [...settings.blacklist],
         strictness: settings.strictness,
       },
       blockedCount: 0,
@@ -132,7 +142,6 @@ async function handleStartSession(payload: StartSessionPayload) {
     return {
       success: true,
       session,
-      suggestedWebsites: analysis.suggestedWebsites,
     };
   } catch (error: any) {
     console.error('Failed to start session:', error);
@@ -140,6 +149,8 @@ async function handleStartSession(payload: StartSessionPayload) {
       success: false,
       error: error.message,
     };
+  } finally {
+    await chrome.storage.local.set({ sessionStarting: false });
   }
 }
 
@@ -224,6 +235,7 @@ async function handleUpdateSettings(settings: any) {
     // Update classifier with new settings
     await classifier.initialize();
     await blocker.updateRules();
+    await aiService.initialize();
     
     return { success: true };
   } catch (error: any) {
@@ -298,9 +310,38 @@ async function handleAllowTemporarily(payload: any) {
   }
 }
 
-// Keep service worker alive
-const keepAlive = () => setInterval(chrome.runtime.getPlatformInfo, 20e3);
-chrome.runtime.onStartup.addListener(keepAlive);
-keepAlive();
+async function handleFilterContent(payload: FilterContentPayload) {
+  try {
+    if (!payload.videos || payload.videos.length === 0) {
+      return { success: true, videosToHide: [] };
+    }
+
+    const checkPayloads: CheckURLPayload[] = payload.videos.map(video => ({
+      url: `https://www.youtube.com/watch?v=${video.id}`,
+      title: [video.title, video.channelName].filter(Boolean).join(' ').trim(),
+    }));
+
+    const results = await classifier.batchClassifyURLs(checkPayloads);
+    const videosToHide = results
+      .filter(result => !result.relevant)
+      .map(result => {
+        try {
+          const videoUrl = new URL(result.url);
+          return videoUrl.searchParams.get('v') || result.url;
+        } catch {
+          return result.url;
+        }
+      });
+
+    return { success: true, videosToHide };
+  } catch (error: any) {
+    console.error('Failed to filter content:', error);
+    return {
+      success: false,
+      error: error.message,
+      videosToHide: [],
+    };
+  }
+}
 
 export {};

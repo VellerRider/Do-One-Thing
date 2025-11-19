@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   showStats: true,
   notificationsEnabled: true,
   aiEnabled: true,
+  dataSharingConsent: false,
 };
 
 const DEFAULT_STATS: Stats = {
@@ -106,11 +107,20 @@ export class Storage {
   }
 
   static async incrementBlockedCount(domain: string): Promise<void> {
-    const stats = await this.getStats();
+    const [stats, session] = await Promise.all([
+      this.getStats(),
+      this.getCurrentSession(),
+    ]);
+    
     stats.totalBlocked += 1;
     stats.websitesBlocked[domain] = (stats.websitesBlocked[domain] || 0) + 1;
     stats.lastUpdated = Date.now();
     await chrome.storage.local.set({ stats });
+    
+    if (session && session.active) {
+      session.blockedCount = (session.blockedCount || 0) + 1;
+      await this.setCurrentSession(session);
+    }
   }
 
   static async resetStats(): Promise<void> {
@@ -120,7 +130,7 @@ export class Storage {
   // Settings operations
   static async getSettings(): Promise<UserSettings> {
     const data = await chrome.storage.local.get('settings');
-    return data.settings || DEFAULT_SETTINGS;
+    return { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
   }
 
   static async updateSettings(updates: Partial<UserSettings>): Promise<void> {

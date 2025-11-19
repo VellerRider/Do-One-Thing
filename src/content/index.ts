@@ -17,18 +17,17 @@ if (isYouTube) {
   contentFilter.filterPage();
 }
 
-// Listen for messages from background script
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message.type === 'SESSION_STARTED') {
-    // Reload page to apply filters
-    window.location.reload();
-  } else if (message.type === 'SESSION_ENDED') {
-    // Reload page to remove filters
+// Refresh page when session state changes
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'local' || !changes.currentSession) return;
+  
+  const { oldValue, newValue } = changes.currentSession;
+  const oldActive = Boolean(oldValue?.active);
+  const newActive = Boolean(newValue?.active);
+  
+  if (oldActive !== newActive) {
     window.location.reload();
   }
-  
-  sendResponse({ success: true });
-  return true;
 });
 
 export {};

@@ -1,15 +1,17 @@
 import { useState } from 'react';
-import type { Stats, AIConfig } from '../../services/types';
+import type { Stats, AIConfig, UserSettings } from '../../services/types';
 
 interface Props {
   onStart: (intent: string) => void;
   stats: Stats | null;
   aiConfig: AIConfig | null;
+  settings: UserSettings | null;
+  onUpdateSettings: (settings: Partial<UserSettings>) => void;
+  sessionStarting: boolean;
 }
 
-export default function StartSessionView({ onStart, stats, aiConfig }: Props) {
+export default function StartSessionView({ onStart, stats, aiConfig, settings, onUpdateSettings, sessionStarting }: Props) {
   const [intent, setIntent] = useState('');
-  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,22 +25,19 @@ export default function StartSessionView({ onStart, stats, aiConfig }: Props) {
       alert('Please configure your AI API key in settings first');
       return;
     }
-    
-    setLoading(true);
-    try {
-      await onStart(intent);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const suggestions = [
-    '🎓 Study for my exam',
-    '💻 Learn Python programming',
-    '📝 Write my essay',
-    '🔬 Research quantum physics',
-    '🎨 Work on my design project',
-  ];
+    if (settings && !settings.dataSharingConsent) {
+      alert('Please consent to sending URLs to OpenAI before starting.');
+      return;
+    }
+
+    if (settings && !settings.aiEnabled) {
+      alert('AI filtering is disabled. Enable it in Settings.');
+      return;
+    }
+    
+    await onStart(intent);
+  };
 
   return (
     <div className="space-y-6">
@@ -60,16 +59,21 @@ export default function StartSessionView({ onStart, stats, aiConfig }: Props) {
             onChange={(e) => setIntent(e.target.value)}
             placeholder="I want to learn React and build a web app..."
             className="w-full h-32 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all resize-none"
-            disabled={loading}
+            disabled={sessionStarting}
           />
         </div>
         
         <button
           type="submit"
-          disabled={loading || !intent.trim()}
+          disabled={
+            sessionStarting ||
+            !intent.trim() ||
+            !aiConfig?.apiKey ||
+            (settings ? !settings.dataSharingConsent || !settings.aiEnabled : true)
+          }
           className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold py-3 px-6 rounded-xl hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] active:scale-[0.98]"
         >
-          {loading ? (
+          {sessionStarting ? (
             <span className="flex items-center justify-center">
               <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -83,21 +87,40 @@ export default function StartSessionView({ onStart, stats, aiConfig }: Props) {
         </button>
       </form>
 
-      {/* Suggestions */}
-      <div>
-        <p className="text-sm text-gray-600 mb-3 font-medium">Quick suggestions:</p>
-        <div className="flex flex-wrap gap-2">
-          {suggestions.map((suggestion, index) => (
-            <button
-              key={index}
-              onClick={() => setIntent(suggestion.split(' ').slice(1).join(' '))}
-              className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm hover:border-blue-400 hover:bg-blue-50 transition-colors"
+      {/* Consent */}
+      {settings && (
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-blue-100 space-y-3">
+          <div className="flex items-start space-x-3">
+            <input
+              id="consent-checkbox"
+              type="checkbox"
+              className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded"
+              checked={settings.dataSharingConsent}
+              onChange={(e) => onUpdateSettings({
+                dataSharingConsent: e.target.checked,
+                aiEnabled: e.target.checked ? settings.aiEnabled : false,
+              })}
+            />
+            <label htmlFor="consent-checkbox" className="text-sm text-gray-700">
+              I understand that DoOneThing will send the URLs and titles of the pages I visit,
+              along with my focus goal, to OpenAI to determine whether a site should be blocked.
+              This is required for AI-powered filtering.
+            </label>
+          </div>
+          <p className="text-xs text-gray-500">
+            Review our{' '}
+            <a
+              href="https://github.com/VellerRider/Do-One-Thing/blob/main/PRIVACY_POLICY.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
             >
-              {suggestion}
-            </button>
-          ))}
+              Privacy Policy
+            </a>{' '}
+            for details about data usage.
+          </p>
         </div>
-      </div>
+      )}
 
       {/* Stats */}
       {stats && stats.sessionsCompleted > 0 && (
@@ -123,14 +146,14 @@ export default function StartSessionView({ onStart, stats, aiConfig }: Props) {
       )}
 
       {/* AI Warning */}
-      {(!aiConfig || !aiConfig.apiKey) && (
+      {(!aiConfig || !aiConfig.apiKey || (settings && (!settings.aiEnabled || !settings.dataSharingConsent))) && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm">
           <div className="flex items-start">
             <span className="text-yellow-500 mr-2">⚠️</span>
             <div>
               <p className="font-semibold text-yellow-800 mb-1">AI Configuration Required</p>
               <p className="text-yellow-700">
-                Please configure your OpenAI API key in settings to use DoOneThing.
+                Please configure your OpenAI API key, enable AI filtering, and consent to sending URLs to OpenAI in Settings.
               </p>
             </div>
           </div>

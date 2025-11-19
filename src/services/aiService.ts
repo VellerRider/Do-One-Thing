@@ -4,60 +4,57 @@ import type {
   AIConfig, 
   IntentAnalysisResult, 
   URLClassification,
-  CheckURLPayload 
+  CheckURLPayload,
+  UserSettings,
 } from './types';
 import { Storage } from './storage';
 
 export class AIService {
   private config: AIConfig | null = null;
+  private settings: UserSettings | null = null;
 
   async initialize() {
-    this.config = await Storage.getAIConfig();
+    const [aiConfig, userSettings] = await Promise.all([
+      Storage.getAIConfig(),
+      Storage.getSettings(),
+    ]);
+
+    this.config = aiConfig;
+    this.settings = userSettings;
     console.log('AI Service initialized with config:', this.config ? {
       provider: this.config.provider,
       model: this.config.model,
       enabled: this.config.enabled,
       hasApiKey: !!this.config.apiKey
     } : 'No config');
+    console.log('AI settings:', this.settings ? {
+      aiEnabled: this.settings.aiEnabled,
+      dataSharingConsent: this.settings.dataSharingConsent,
+    } : 'No settings');
   }
 
   async analyzeIntent(userInput: string): Promise<IntentAnalysisResult> {
     console.log('analyzeIntent called with:', userInput);
     
-    if (!this.config || !this.config.enabled) {
-      console.error('AI service not configured:', this.config);
-      throw new Error('AI service not configured. Please set your API key in settings.');
-    }
+    const config = this.ensureAIUsageAllowed();
 
-    if (!this.config.apiKey) {
-      console.error('API key missing');
-      throw new Error('API key is missing. Please set your API key in settings.');
-    }
-
-    if (this.config.provider === 'openai') {
+    if (config.provider === 'openai') {
       return this.analyzeIntentWithOpenAI(userInput);
     }
 
-    throw new Error(`Unsupported AI provider: ${this.config.provider}`);
+    throw new Error(`Unsupported AI provider: ${config.provider}`);
   }
 
   private async analyzeIntentWithOpenAI(userInput: string): Promise<IntentAnalysisResult> {
-    const prompt = `You are a focus assistant. The user wants to focus on one thing. Analyze their intent:
+    const prompt = `You are a focus coach. Rewrite the user's goal so it is short, clear, and action-focused.
 
-User said: "${userInput}"
+User goal: "${userInput}"
 
-Return a JSON object with:
+Return JSON:
 {
-  "intent": "concise description of what user wants to focus on",
-  "keywords": ["keyword1", "keyword2", ...] (at least 10 relevant keywords),
-  "allowedCategories": ["category1", ...] (website categories that are relevant),
-  "blockedCategories": ["category1", ...] (website categories that should be blocked),
-  "suggestedWebsites": ["website1.com", "website2.com", ...] (5-10 relevant websites),
-  "confidence": 95 (0-100, how confident you are about understanding the intent)
-}
-
-Be comprehensive with keywords. Include synonyms, related terms, and domain-specific terms.
-`;
+  "intent": "concise restatement of the goal in 10 words or fewer",
+  "confidence": 95
+}`;
 
     try {
       console.log('Calling OpenAI API with model:', this.config!.model);
@@ -92,11 +89,7 @@ Be comprehensive with keywords. Include synonyms, related terms, and domain-spec
       const result = JSON.parse(data.choices[0].message.content);
       
       return {
-        intent: result.intent,
-        keywords: result.keywords || [],
-        allowedCategories: result.allowedCategories || [],
-        blockedCategories: result.blockedCategories || [],
-        suggestedWebsites: result.suggestedWebsites || [],
+        intent: result.intent || userInput,
         confidence: result.confidence || 80,
       };
     } catch (error) {
@@ -107,25 +100,21 @@ Be comprehensive with keywords. Include synonyms, related terms, and domain-spec
 
   async classifyURL(
     payload: CheckURLPayload, 
-    intent: string, 
-    keywords: string[],
+    intent: string,
     strictness: 'relaxed' | 'standard' | 'strict' = 'standard'
   ): Promise<URLClassification> {
-    if (!this.config || !this.config.enabled) {
-      throw new Error('AI service not configured');
+    const config = this.ensureAIUsageAllowed();
+
+    if (config.provider === 'openai') {
+      return this.classifyURLWithOpenAI(payload, intent, strictness);
     }
 
-    if (this.config.provider === 'openai') {
-      return this.classifyURLWithOpenAI(payload, intent, keywords, strictness);
-    }
-
-    throw new Error(`Unsupported AI provider: ${this.config.provider}`);
+    throw new Error(`Unsupported AI provider: ${config.provider}`);
   }
 
   private async classifyURLWithOpenAI(
     payload: CheckURLPayload, 
-    intent: string, 
-    keywords: string[],
+    intent: string,
     strictness: 'relaxed' | 'standard' | 'strict'
   ): Promise<URLClassification> {
     // Extract domain and URL parameters to analyze content
@@ -150,8 +139,8 @@ Be comprehensive with keywords. Include synonyms, related terms, and domain-spec
     if (strictness === 'relaxed') {
       strictnessInstruction = `Be LENIENT and permissive. Allow websites unless they are clearly distracting (entertainment, social media, shopping unrelated to the goal).
 For general knowledge sites (Google, Wikipedia, etc.), focus on the SEARCH TERMS, URL PARAMETERS, and PAGE TITLE:
-- If the search terms or page content relate to the focus goal, ALLOW it
-- Only block if the content is clearly unrelated or distracting`;
+- If the search terms or page content relate to the focus goal, or potentially contribute to it, ALLOW it
+- Only block if the content is clearly off-topic or distracting`;
     } else if (strictness === 'standard') {
       strictnessInstruction = `Be BALANCED. Allow websites that are reasonably related to the goal.
 For general knowledge sites (Google, Wikipedia, etc.), analyze the SPECIFIC CONTENT:
@@ -164,8 +153,8 @@ Even for general sites, check if the specific content (search terms, page topic)
     }
     
     const prompt = `Focus Goal: ${intent}
-Keywords: ${keywords.join(', ')}
 Strictness Mode: ${strictness}
+General Rule: Allow pages whenever they could plausibly support the focus goal. Only block when the content is clearly irrelevant or distracting.
 
 Website Analysis:
 - Domain: ${domain}
@@ -207,6 +196,13 @@ Return JSON:
 
       const data = await response.json();
       const result = JSON.parse(data.choices[0].message.content);
+
+      console.log('[AI] URL classification result:', {
+        url: payload.url,
+        relevant: result.relevant,
+        confidence: result.confidence,
+        reason: result.reason,
+      });
       
       return {
         url: payload.url,
@@ -222,12 +218,13 @@ Return JSON:
     }
   }
 
-  async batchClassifyURLs(urls: CheckURLPayload[], intent: string, keywords: string[]): Promise<URLClassification[]> {
+  async batchClassifyURLs(urls: CheckURLPayload[], intent: string): Promise<URLClassification[]> {
+    this.ensureAIUsageAllowed();
     // For better performance, batch multiple URLs in one API call
     const urlList = urls.map(u => `- ${u.url}${u.title ? ` (${u.title})` : ''}`).join('\n');
     
     const prompt = `Focus Goal: ${intent}
-Keywords: ${keywords.join(', ')}
+General Rule: Allow pages whenever they could plausibly support the focus goal. Only block when the content is clearly irrelevant or distracting.
 
 Classify these websites as relevant or not:
 ${urlList}
@@ -262,7 +259,7 @@ Return JSON array:
       const data = await response.json();
       const results = JSON.parse(data.choices[0].message.content);
       
-      return results.classifications.map((r: any) => ({
+      const mapped: URLClassification[] = results.classifications.map((r: any) => ({
         url: r.url,
         relevant: r.relevant,
         confidence: r.confidence || 80,
@@ -270,14 +267,45 @@ Return JSON array:
         timestamp: Date.now(),
         source: 'ai',
       }));
+
+      mapped.forEach((result) => {
+        console.log('[AI] Batch URL classification:', {
+          url: result.url,
+          relevant: result.relevant,
+          confidence: result.confidence,
+          reason: result.reason,
+        });
+      });
+
+      return mapped;
     } catch (error) {
       console.error('Error batch classifying URLs:', error);
       // Fallback to individual classification
       const results = await Promise.all(
-        urls.map(url => this.classifyURL(url, intent, keywords))
+        urls.map(url => this.classifyURL(url, intent))
       );
       return results;
     }
+  }
+
+  private ensureAIUsageAllowed(): AIConfig {
+    if (!this.settings?.aiEnabled) {
+      throw new Error('AI filtering is disabled in settings.');
+    }
+
+    if (!this.settings?.dataSharingConsent) {
+      throw new Error('Please consent to data sharing before using AI features.');
+    }
+
+    if (!this.config || !this.config.enabled) {
+      throw new Error('AI service not configured. Please set your API key in settings.');
+    }
+
+    if (!this.config.apiKey) {
+      throw new Error('API key is missing. Please set your API key in settings.');
+    }
+
+    return this.config;
   }
 }
 

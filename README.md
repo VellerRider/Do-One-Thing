@@ -91,6 +91,12 @@ Available settings:
 - Whitelist domains
 - Custom blocked page
 
+### 🔒 Privacy & Consent
+
+- AI-powered filtering sends the URLs, titles, and focus goal to OpenAI for classification
+- You must explicitly consent inside the extension before enabling AI features
+- You can disable AI filtering or withdraw consent at any time in Settings
+
 ### 📁 Project Structure
 
 ```
@@ -207,6 +213,12 @@ npm run build
 - 拦截强度（宽松/标准/严格）
 - 白名单域名
 - 自定义拦截页面
+
+### 🔒 隐私与同意
+
+- 启用 AI 过滤时，会将访问的 URL、页面标题和专注目标发送到 OpenAI 进行判断
+- 你需要在扩展中明确同意后才能开启 AI 功能
+- 可随时在设置中关闭 AI 过滤或撤回同意
 
 ### 📁 项目结构
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { FocusSession, Stats } from '../../services/types';
+import type { FocusSession, Stats, StrictnessLevel } from '../../services/types';
 import { formatDuration } from '../../utils/helpers';
 
 interface Props {
@@ -7,6 +7,12 @@ interface Props {
   stats: Stats | null;
   onEnd: () => void;
 }
+
+const STRICTNESS_COPY: Record<StrictnessLevel, string> = {
+  relaxed: 'Relaxed filtering',
+  standard: 'Balanced filtering',
+  strict: 'Strict filtering',
+};
 
 export default function ActiveSessionView({ session, stats, onEnd }: Props) {
   const [elapsed, setElapsed] = useState(Date.now() - session.startTime);
@@ -55,7 +61,7 @@ export default function ActiveSessionView({ session, stats, onEnd }: Props) {
         
         <div className="flex items-center space-x-4 text-sm opacity-90">
           <span>🚫 {session.blockedCount || 0} blocked</span>
-          <span>📋 {session.rules.keywords.length} keywords</span>
+          <span>🧠 {STRICTNESS_COPY[session.rules.strictness]}</span>
         </div>
       </div>
 
@@ -78,24 +84,15 @@ export default function ActiveSessionView({ session, stats, onEnd }: Props) {
         </div>
       </div>
 
-      {/* Keywords */}
+      {/* Focus Goal */}
       <div className="bg-white rounded-lg p-4 shadow-sm">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">🔑 Active Keywords</h3>
-        <div className="flex flex-wrap gap-2">
-          {session.rules.keywords.slice(0, 10).map((keyword, index) => (
-            <span 
-              key={index}
-              className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
-            >
-              {keyword}
-            </span>
-          ))}
-          {session.rules.keywords.length > 10 && (
-            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-              +{session.rules.keywords.length - 10} more
-            </span>
-          )}
-        </div>
+        <h3 className="text-sm font-semibold text-gray-700 mb-2">🎯 Focus Goal</h3>
+        <p className="text-gray-800 text-sm leading-relaxed">
+          {session.intent}
+        </p>
+        <p className="text-xs text-gray-500 mt-2">
+          AI allows any page that could reasonably help with this goal.
+        </p>
       </div>
 
       {/* Blocked Sites */}

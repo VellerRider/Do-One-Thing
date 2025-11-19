@@ -12,9 +12,39 @@ export default function App() {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [aiConfig, setAIConfig] = useState<AIConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionStarting, setSessionStarting] = useState(false);
 
   useEffect(() => {
     loadData();
+    
+    let mounted = true;
+    
+    const loadSessionStarting = async () => {
+      try {
+        const data = await chrome.storage.local.get('sessionStarting');
+        if (mounted) {
+          setSessionStarting(Boolean(data.sessionStarting));
+        }
+      } catch (error) {
+        console.error('Failed to load sessionStarting state:', error);
+      }
+    };
+    
+    loadSessionStarting();
+    
+    const handleStorageChange = (changes: Record<string, chrome.storage.StorageChange>, areaName: string) => {
+      if (areaName !== 'local') return;
+      if (changes.sessionStarting) {
+        setSessionStarting(Boolean(changes.sessionStarting.newValue));
+      }
+    };
+    
+    chrome.storage.onChanged.addListener(handleStorageChange);
+    
+    return () => {
+      mounted = false;
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+    };
   }, []);
 
   const loadData = async () => {
@@ -42,6 +72,11 @@ export default function App() {
   };
 
   const handleStartSession = async (intent: string) => {
+    if (sessionStarting) return;
+    
+    setSessionStarting(true);
+    await chrome.storage.local.set({ sessionStarting: true });
+    
     try {
       const response = await chrome.runtime.sendMessage({
         type: 'START_SESSION',
@@ -53,18 +88,13 @@ export default function App() {
         setView('active');
         setPreviousView('active');
         
-        // Notify all tabs
-        const tabs = await chrome.tabs.query({});
-        tabs.forEach(tab => {
-          if (tab.id) {
-            chrome.tabs.sendMessage(tab.id, { type: 'SESSION_STARTED' }).catch(() => {});
-          }
-        });
       } else {
         alert(`Failed to start session: ${response.error}`);
       }
     } catch (error: any) {
       alert(`Error: ${error.message}`);
+      await chrome.storage.local.set({ sessionStarting: false });
+      setSessionStarting(false);
     }
   };
 
@@ -77,14 +107,6 @@ export default function App() {
         setView('start');
         setPreviousView('start');
         await loadData();
-        
-        // Notify all tabs
-        const tabs = await chrome.tabs.query({});
-        tabs.forEach(tab => {
-          if (tab.id) {
-            chrome.tabs.sendMessage(tab.id, { type: 'SESSION_ENDED' }).catch(() => {});
-          }
-        });
       }
     } catch (error) {
       console.error('Failed to end session:', error);
@@ -158,6 +180,9 @@ export default function App() {
             onStart={handleStartSession}
             stats={stats}
             aiConfig={aiConfig}
+            settings={settings}
+            onUpdateSettings={handleUpdateSettings}
+            sessionStarting={sessionStarting}
           />
         )}
         

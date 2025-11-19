@@ -176,6 +176,56 @@ export default function SettingsView({ settings, aiConfig, onUpdateSettings, onS
       {/* AI Config Tab */}
       {activeTab === 'ai' && (
         <div className="space-y-4">
+          <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
+            <label className="flex items-start space-x-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.aiEnabled}
+                onChange={(e) => onUpdateSettings({ aiEnabled: e.target.checked })}
+                className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded"
+              />
+              <div>
+                <p className="text-sm font-semibold text-gray-800">Enable AI Filtering</p>
+                <p className="text-xs text-gray-500">
+                  When enabled, URLs and page titles are sent to OpenAI to determine whether a site
+                  might help with your focus goal. Disable this to rely only on your custom allow/block lists.
+                </p>
+              </div>
+            </label>
+
+            <label className="flex items-start space-x-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.dataSharingConsent}
+                onChange={(e) => onUpdateSettings({
+                  dataSharingConsent: e.target.checked,
+                  aiEnabled: e.target.checked ? settings.aiEnabled : false,
+                })}
+                className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded"
+              />
+              <div>
+                <p className="text-sm font-semibold text-gray-800">I consent to send browsing data to OpenAI</p>
+                <p className="text-xs text-gray-500">
+                  This includes the URLs, titles, and focus goals needed for AI filtering. See our{' '}
+                  <a
+                    href="https://github.com/VellerRider/Do-One-Thing/blob/main/PRIVACY_POLICY.md"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    Privacy Policy
+                  </a>.
+                </p>
+              </div>
+            </label>
+
+            {!settings.aiEnabled && (
+              <p className="text-xs text-red-600">
+                AI is disabled. DoOneThing will only use your manual allow/block lists, and some features may not work.
+              </p>
+            )}
+          </div>
+
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               AI Provider

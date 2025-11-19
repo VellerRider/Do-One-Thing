@@ -3,7 +3,7 @@
 import type { FocusSession, URLClassification, CheckURLPayload } from '../services/types';
 import { Storage } from '../services/storage';
 import { aiService } from '../services/aiService';
-import { extractDomain, calculateSimilarity } from '../utils/helpers';
+import { extractDomain } from '../utils/helpers';
 
 export class URLClassifier {
   private session: FocusSession | null = null;
@@ -91,42 +91,11 @@ export class URLClassifier {
       return cached;
     }
 
-    // 4. Keyword matching (for quick decisions)
-    const keywordScore = this.calculateKeywordScore(payload, rules.keywords);
-    
-    if (rules.strictness === 'relaxed' && keywordScore > 0.3) {
-      const result: URLClassification = {
-        url: payload.url,
-        relevant: true,
-        confidence: Math.floor(keywordScore * 100),
-        reason: 'Keyword match',
-        timestamp: Date.now(),
-        source: 'rules',
-      };
-      await Storage.setURLClassification(result);
-      return result;
-    }
-
-    if (rules.strictness === 'strict' && keywordScore < 0.5) {
-      await Storage.incrementBlockedCount(domain);
-      const result: URLClassification = {
-        url: payload.url,
-        relevant: false,
-        confidence: Math.floor((1 - keywordScore) * 100),
-        reason: 'Low keyword relevance',
-        timestamp: Date.now(),
-        source: 'rules',
-      };
-      await Storage.setURLClassification(result);
-      return result;
-    }
-
-    // 5. AI classification (fallback)
+    // 4. AI classification based on intent only
     try {
       const aiResult = await aiService.classifyURL(
         payload,
         this.session.intent,
-        rules.keywords,
         rules.strictness
       );
       
@@ -140,13 +109,13 @@ export class URLClassifier {
     } catch (error) {
       console.error('AI classification failed:', error);
       
-      // Fallback to keyword-based decision
-      const fallbackRelevant = keywordScore > 0.4;
+      // Fallback: allow when uncertain to avoid blocking useful resources
+      const fallbackRelevant = true;
       const result: URLClassification = {
         url: payload.url,
         relevant: fallbackRelevant,
-        confidence: 50,
-        reason: 'AI unavailable, using keyword matching',
+        confidence: 40,
+        reason: 'AI unavailable, allowing by default',
         timestamp: Date.now(),
         source: 'rules',
       };
@@ -184,29 +153,6 @@ export class URLClassifier {
     });
   }
 
-  private calculateKeywordScore(payload: CheckURLPayload, keywords: string[]): number {
-    if (keywords.length === 0) return 0.5;
-    
-    const text = `${payload.url} ${payload.title || ''}`.toLowerCase();
-    
-    // Check exact keyword matches
-    let matchCount = 0;
-    for (const keyword of keywords) {
-      if (text.includes(keyword.toLowerCase())) {
-        matchCount++;
-      }
-    }
-    
-    const exactScore = matchCount / keywords.length;
-    
-    // Check similarity
-    const keywordsText = keywords.join(' ');
-    const similarityScore = calculateSimilarity(text, keywordsText);
-    
-    // Weighted average
-    return exactScore * 0.7 + similarityScore * 0.3;
-  }
-
   async batchClassifyURLs(urls: CheckURLPayload[]): Promise<URLClassification[]> {
     // Check cache first
     const results: URLClassification[] = [];
@@ -230,8 +176,7 @@ export class URLClassifier {
       try {
         const aiResults = await aiService.batchClassifyURLs(
           uncached,
-          this.session.intent,
-          this.session.rules.keywords
+          this.session.intent
         );
         
         // Cache results

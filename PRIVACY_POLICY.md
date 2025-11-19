@@ -1,6 +1,6 @@
 # Privacy Policy for DoOneThing
 
-**Last Updated**: November 7, 2025
+**Last Updated**: November 8, 2025
 
 ## Overview
 
@@ -12,7 +12,7 @@ DoOneThing ("we", "our", or "the extension") is committed to protecting your pri
 
 1. **User Settings**
    - OpenAI API Key (stored locally on your device)
-   - Focus goals and keywords
+   - Focus goals you enter
    - Strictness mode preferences
    - Whitelist/blacklist configurations
 
@@ -48,8 +48,6 @@ The extension requires the following permissions:
 
 - **storage**: To save your settings and session data locally
 - **declarativeNetRequest**: To block websites based on your focus goals
-- **scripting**: To inject content filters on web pages
-- **tabs**: To detect which websites you're visiting
 - **webNavigation**: To monitor page navigation for filtering
 - **host_permissions**: Required to access all URLs for filtering
 
@@ -65,7 +63,8 @@ The extension requires the following permissions:
 You have full control over your data:
 
 - **View**: Check your settings in the extension popup
-- **Modify**: Change your API key, focus goals, and preferences at any time
+- **Modify**: Change your API key, focus goals, strictness level, and preferences at any time
+- **Consent**: Enable/disable AI filtering or withdraw your data-sharing consent in Settings. When AI is disabled, browsing data is no longer sent to OpenAI.
 - **Delete**: Uninstall the extension to remove all stored data
 
 ## Children's Privacy
@@ -80,7 +79,7 @@ We may update this privacy policy from time to time. We will notify users of any
 
 For questions about this privacy policy, please:
 - Open an issue on GitHub: https://github.com/VellerRider/Do-One-Thing
-- Email: [Your contact email]
+- Email: support@doonething.app
 
 ## Consent
 
@@ -90,7 +89,7 @@ By using DoOneThing, you consent to this privacy policy.
 
 ## 中文版本
 
-**更新日期**：2025年11月7日
+**更新日期**：2025年11月8日
 
 ## 概述
 
@@ -102,7 +101,7 @@ DoOneThing（"我们"或"该扩展"）致力于保护您的隐私。本隐私政
 
 1. **用户设置**
    - OpenAI API Key（本地存储在您的设备上）
-   - 专注目标和关键词
+   - 你输入的专注目标
    - 宽容度模式偏好
    - 白名单/黑名单配置
 
@@ -138,8 +137,6 @@ DoOneThing（"我们"或"该扩展"）致力于保护您的隐私。本隐私政
 
 - **storage**：在本地保存您的设置和会话数据
 - **declarativeNetRequest**：根据您的专注目标拦截网站
-- **scripting**：在网页上注入内容过滤器
-- **tabs**：检测您正在访问的网站
 - **webNavigation**：监控页面导航以进行过滤
 - **host_permissions**：访问所有 URL 以进行过滤所需
 
@@ -155,7 +152,8 @@ DoOneThing（"我们"或"该扩展"）致力于保护您的隐私。本隐私政
 您对数据拥有完全控制权：
 
 - **查看**：在扩展弹窗中查看您的设置
-- **修改**：随时更改您的 API 密钥、专注目标和偏好
+- **修改**：随时更改您的 API 密钥、专注目标、宽容度和偏好
+- **同意**：可在设置中开启/关闭 AI 过滤或撤回数据共享同意。关闭 AI 后，我们将不会再向 OpenAI 发送浏览数据。
 - **删除**：卸载扩展即可删除所有存储的数据
 
 ## 儿童隐私
@@ -170,7 +168,7 @@ DoOneThing（"我们"或"该扩展"）致力于保护您的隐私。本隐私政
 
 有关本隐私政策的问题，请：
 - 在 GitHub 上提交问题：https://github.com/VellerRider/Do-One-Thing
-- 电子邮件：[您的联系邮箱]
+- 电子邮件：support@doonething.app
 
 ## 同意
 
