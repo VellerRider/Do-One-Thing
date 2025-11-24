@@ -48,7 +48,6 @@ The extension requires the following permissions:
 
 - **storage**: To save your settings and session data locally
 - **declarativeNetRequest**: To block websites based on your focus goals
-- **webNavigation**: To monitor page navigation for filtering
 - **host_permissions**: Required to access all URLs for filtering
 
 ## Data Sharing
@@ -137,7 +136,6 @@ DoOneThing（"我们"或"该扩展"）致力于保护您的隐私。本隐私政
 
 - **storage**：在本地保存您的设置和会话数据
 - **declarativeNetRequest**：根据您的专注目标拦截网站
-- **webNavigation**：监控页面导航以进行过滤
 - **host_permissions**：访问所有 URL 以进行过滤所需
 
 ## 数据共享

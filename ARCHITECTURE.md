@@ -238,8 +238,7 @@ URL: {url}
 {
   "permissions": [
     "storage",
-    "declarativeNetRequest",
-    "webNavigation"
+    "declarativeNetRequest"
   ],
   "host_permissions": [
     "<all_urls>"
